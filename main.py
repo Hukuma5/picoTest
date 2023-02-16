@@ -30,7 +30,7 @@ Connect with the WiFi
 '''
 print("Try to connect with the WiFi..")
 while (1):
-    if "WIFI CONNECTED" in esp01.connectWiFi("MGTS_GPON5_Nf9A","MdhG3pMW"):
+    if "WIFI CONNECTED" in esp01.connectWiFi("*","*"):
         print("ESP8266 connect with the WiFi..")
         break;
     else:
