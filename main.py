@@ -1,9 +1,13 @@
-from machine import UART, Pin
+from machine import UART, Pin, I2C
 import time
+import re
 from esp8266 import ESP8266
+from Elink import EPD_2in9
+
 esp01 = ESP8266()
 esp8266_at_ver = None
 led=Pin(25,Pin.OUT)
+# led = Pin("LED", Pin.OUT)
 print("StartUP",esp01.startUP())
 #print("ReStart",esp01.reStart())
 print("StartUP",esp01.startUP())
@@ -29,8 +33,11 @@ print("\r\n\r\n")
 Connect with the WiFi
 '''
 print("Try to connect with the WiFi..")
+
+button = Pin(14, Pin.IN, Pin.PULL_DOWN)
+
 while (1):
-    if "WIFI CONNECTED" in esp01.connectWiFi("*","*"):
+    if "WIFI CONNECTED" in esp01.connectWiFi("MGTS_GPON5_Nf9A","MdhG3pMW"):
         print("ESP8266 connect with the WiFi..")
         break;
     else:
@@ -39,23 +46,37 @@ while (1):
 print("\r\n\r\n")
 print("Now it's time to start HTTP Get/Post Operation.......\r\n")
 while(1):
-    led.toggle()
-    time.sleep(1)
-    '''
-    Going to do HTTP Get Operation with www.httpbin.org/ip, It return the IP address of the connected device (получаем IP адрес подключенного устройства)
-    '''
-    httpCode, httpRes = esp01.doHttpGet("192.168.1.10","/add","RaspberryPi-Pico", port=5000)
-    print("------------- www.httpbin.org/ip Get Operation Result -----------------------")
-    print("HTTP Code:",httpCode)
-    print("HTTP Response:",httpRes)
-    print("-----------------------------------------------------------------------------\r\n\r\n")
-    '''
-    Going to do HTTP Post Operation with www.httpbin.org/post
-    '''
-    # post_json="abcdefghijklmnopqrstuvwxyz"  #"{\"name\":\"Noyel\"}"
-    # httpCode, httpRes = esp01.doHttpPost("http://www.httpbin.org/","/post","RPi-Pico", "application/json",post_json,port=80)
-    # print("------------- www.httpbin.org/post Post Operation Result -----------------------")
-    # print("HTTP Code:",httpCode)
-    # print("HTTP Response:",httpRes)
-    # print("--------------------------------------------------------------------------------\r\n\r\n")
-    #break
+    if button.value():
+        led.toggle()
+        httpCode, httpRes = esp01.doHttpGet("192.168.1.10","/add","RaspberryPi-Pico", port=5000)
+        print(httpRes)
+        pattern = r"k=(\d+)&n=(\d+)"
+
+        match = re.search(pattern, httpRes)
+        if match:
+            k = int(match.group(1))
+            n = int(match.group(2))
+            print("k =", k)
+            print("n =", n)
+
+        epd = EPD_2in9()
+        epd.Clear(0xff)
+
+        epd.fill(0xff)
+        epd.text("User added", 5, 10, 0x00)
+        epd.text("to queue !", 5, 40, 0x00)
+        epd.text("Your id - " + str(k), 5, 70, 0x00)
+        epd.text("Position - " + str(n), 5, 100, 0x00)
+
+        epd.rect(10, 180, 50, 80, 0x00)
+        epd.fill_rect(70, 180, 50, 80, 0x00)
+        epd.display_Base(epd.buffer)
+        epd.delay_ms(2000)
+
+        epd.init()
+        epd.Clear(0xff)
+        epd.delay_ms(2000)
+        print("sleep")
+        epd.sleep()
+        led.toggle()
+        continue
